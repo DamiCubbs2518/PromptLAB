@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prompt Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="page">
+
+  <header class="site-header">
+    <p class="eyebrow">Prompt Engineering Workbench</p>
+    <h1>Prompt Lab</h1>
+    <p class="tagline">Run one task two ways. See what technique actually changes.</p>
+  </header>
+
+  <main>
+    <section class="bench" aria-label="Set up your test">
+
+      <div class="field">
+        <label for="task">Task</label>
+        <textarea id="task" rows="3" placeholder="e.g. Explain how compound interest works"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="audience">Who's this for? <span class="optional">(optional)</span></label>
+        <input id="audience" type="text" placeholder="e.g. a first-year university student">
+      </div>
+
+      <div class="field">
+        <label id="technique-label">Technique to test against the raw prompt</label>
+        <div class="chip-row" role="radiogroup" aria-labelledby="technique-label">
+          <button class="chip active" data-technique="role" type="button" role="radio" aria-checked="true">Role</button>
+          <button class="chip" data-technique="fewshot" type="button" role="radio" aria-checked="false">Few-shot</button>
+          <button class="chip" data-technique="structured" type="button" role="radio" aria-checked="false">Structured</button>
+          <button class="chip" data-technique="template" type="button" role="radio" aria-checked="false">Template</button>
+        </div>
+        <p class="technique-note" id="technique-note"></p>
+      </div>
+
+      <button id="run-btn" class="run-btn" type="button">Run comparison</button>
+      <p class="mock-notice">Requires the backend server running locally (see server/README).</p>
+
+    </section>
+
+    <section class="results" aria-label="Results" id="results" hidden>
+
+      <div class="slide" id="slide-a">
+        <div class="slide-tab">
+          <span class="slide-label">Sample A</span>
+          <span class="slide-sub">Raw prompt</span>
+        </div>
+        <pre class="slide-prompt" id="prompt-a"></pre>
+        <div class="slide-output" id="output-a"></div>
+      </div>
+
+      <div class="slide" id="slide-b">
+        <div class="slide-tab slide-tab-enhanced">
+          <span class="slide-label">Sample B</span>
+          <span class="slide-sub" id="slide-b-sub">Role prompting</span>
+        </div>
+        <pre class="slide-prompt" id="prompt-b"></pre>
+        <div class="slide-output" id="output-b"></div>
+        <p class="diff-note" id="diff-note"></p>
+      </div>
+
+    </section>
+  </main>
+
+  <main>
+    <section class="bench" aria-label="Expand a prompt">
+      <div class="site-header" style="margin-bottom: 24px;">
+        <p class="eyebrow">Prompt expander</p>
+        <p class="tagline">Paste a short, rough prompt — get back a detailed, explicit version. No AI response generated, just the rewritten prompt.</p>
+      </div>
+
+      <div class="field">
+        <label for="expand-input">Rough prompt</label>
+        <textarea id="expand-input" rows="2" placeholder="e.g. generate a ford car painted black"></textarea>
+      </div>
+
+      <button id="expand-btn" class="run-btn" type="button">Expand prompt</button>
+
+      <div class="field" id="expand-result" hidden style="margin-top: 22px;">
+        <label>Expanded prompt</label>
+        <pre class="slide-prompt" id="expand-output" style="border: 1px solid var(--paper-line); border-radius: var(--radius); border-bottom: 1px solid var(--paper-line);"></pre>
+        <button id="expand-copy-btn" class="chip" type="button" style="margin-top: 10px;">Copy</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>Prompt Lab — a small tool for seeing what prompting techniques actually do.</p>
+  </footer>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
