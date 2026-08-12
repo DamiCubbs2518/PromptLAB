@@ -81,12 +81,11 @@ setTechnique(selectedTechnique); // initialize note text on load
 // NOTE: this currently returns a placeholder response instead of calling a real
 // model. Swap runModel() for a real API call once the backend is wired up.
 
-const SERVER_URL = "http://localhost:3001/api/generate";
-// If you set ACCESS_PASSCODE on the server, put the same value here.
-const ACCESS_PASSCODE="123456";
+const SERVER_BASE_URL = "https://promptlab-server-lmwh.onrender.com"; // ← change this one line for local vs live// If you set ACCESS_PASSCODE on the server, put the same value here.
+const ACCESS_PASSCODE = "";
 
 async function runModel(prompt) {
-  const res = await fetch(SERVER_URL, {
+  const res = await fetch(`${SERVER_BASE_URL}/api/generate`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -154,7 +153,7 @@ const expandOutput = document.getElementById("expand-output");
 const expandCopyBtn = document.getElementById("expand-copy-btn");
 
 async function expandPrompt(prompt) {
-  const res = await fetch("http://localhost:3001/api/expand", {
+  const res = await fetch(`${SERVER_BASE_URL}/api/expand`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
