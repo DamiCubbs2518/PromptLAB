@@ -81,8 +81,9 @@ setTechnique(selectedTechnique); // initialize note text on load
 // NOTE: this currently returns a placeholder response instead of calling a real
 // model. Swap runModel() for a real API call once the backend is wired up.
 
-const SERVER_BASE_URL = "https://promptlab-server-lmwh.onrender.com"; // ← change this one line for local vs live// If you set ACCESS_PASSCODE on the server, put the same value here.
-const ACCESS_PASSCODE = "123456";
+const SERVER_BASE_URL = "https://promptlab-backend-f3kc.onrender.com"; // ← change this one line for local vs live
+// If you set ACCESS_PASSCODE on the server, put the same value here.
+const ACCESS_PASSCODE = "";
 
 async function runModel(prompt) {
   const res = await fetch(`${SERVER_BASE_URL}/api/generate`, {
@@ -135,7 +136,7 @@ runBtn.addEventListener("click", async () => {
 
     results.hidden = false;
   } catch (err) {
-    alert(`Couldn't reach the server: ${err.message}\n\nMake sure the backend is running (npm start in the server folder).`);
+    alert(`Couldn't reach the server: ${err.message}\n\nIf this is the first request in a while, the free server may just be waking up — try again in a moment.`);
   } finally {
     runBtn.disabled = false;
     runBtn.textContent = "Run comparison";
@@ -186,7 +187,7 @@ expandBtn.addEventListener("click", async () => {
     expandOutput.textContent = expanded;
     expandResult.hidden = false;
   } catch (err) {
-    alert(`Couldn't expand the prompt: ${err.message}`);
+    alert(`Couldn't expand the prompt: ${err.message}\n\nIf this is the first request in a while, the free server may just be waking up — try again in a moment.`);
   } finally {
     expandBtn.disabled = false;
     expandBtn.textContent = "Expand prompt";
