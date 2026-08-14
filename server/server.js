@@ -25,14 +25,13 @@ app.use((req, res, next) => {
   const required = process.env.ACCESS_PASSCODE;
   if (!required) return next();
   const provided = req.header("x-access-passcode");
-  console.log(`Passcode check — required length: ${required.length}, provided length: ${provided ? provided.length : 0}, match: ${provided === required}`);
   if (provided !== required) {
     return res.status(401).json({ error: "Invalid or missing passcode." });
   }
   next();
 });
 
-async function callGemini(text) {
+async function callGemini(text, attempt = 1) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
   const geminiRes = await fetch(url, {
@@ -48,8 +47,24 @@ async function callGemini(text) {
 
   if (!geminiRes.ok) {
     const errText = await geminiRes.text();
+
+    // Gemini is temporarily overloaded (503) or being rate-limited (429) —
+    // both are transient, so retry a couple of times with a short backoff
+    // before giving up, instead of failing on the first hiccup.
+    const isRetryable = geminiRes.status === 503 || geminiRes.status === 429;
+    if (isRetryable && attempt < 3) {
+      const delayMs = attempt * 1500;
+      console.log(`Gemini ${geminiRes.status}, retrying in ${delayMs}ms (attempt ${attempt})`);
+      await new Promise(r => setTimeout(r, delayMs));
+      return callGemini(text, attempt + 1);
+    }
+
     console.error("Gemini API error:", errText);
-    throw new Error("Gemini API request failed.");
+    throw new Error(
+      isRetryable
+        ? "Gemini is temporarily busy. Please try again in a moment."
+        : "Gemini API request failed."
+    );
   }
 
   const data = await geminiRes.json();
