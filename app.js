@@ -83,7 +83,7 @@ setTechnique(selectedTechnique); // initialize note text on load
 
 const SERVER_BASE_URL = "https://promptlab-backend-f3kc.onrender.com"; // ← change this one line for local vs live
 // If you set ACCESS_PASSCODE on the server, put the same value here.
-const ACCESS_PASSCODE = "";
+const ACCESS_PASSCODE = "123456";
 
 async function runModel(prompt) {
   const res = await fetch(`${SERVER_BASE_URL}/api/generate`, {

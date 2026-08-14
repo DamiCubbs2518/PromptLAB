@@ -25,6 +25,7 @@ app.use((req, res, next) => {
   const required = process.env.ACCESS_PASSCODE;
   if (!required) return next();
   const provided = req.header("x-access-passcode");
+  console.log(`Passcode check — required length: ${required.length}, provided length: ${provided ? provided.length : 0}, match: ${provided === required}`);
   if (provided !== required) {
     return res.status(401).json({ error: "Invalid or missing passcode." });
   }
