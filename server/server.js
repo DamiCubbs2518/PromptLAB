@@ -9,7 +9,9 @@ const cors = require("cors");
 const app = express();
 const PORT = process.env.PORT || 3001;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = "gemini-flash-latest";
+// Tried in order — if the first is busy/overloaded after its retries, fall
+// back to the next one rather than failing outright.
+const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"];
 
 if (!GEMINI_API_KEY) {
   console.error("Missing GEMINI_API_KEY. Add it to server/.env before starting.");
@@ -31,8 +33,8 @@ app.use((req, res, next) => {
   next();
 });
 
-async function callGemini(text, attempt = 1) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+async function callGeminiWithModel(text, model, attempt = 1) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
   const geminiRes = await fetch(url, {
     method: "POST",
@@ -50,25 +52,39 @@ async function callGemini(text, attempt = 1) {
 
     // Gemini is temporarily overloaded (503) or being rate-limited (429) —
     // both are transient, so retry a couple of times with a short backoff
-    // before giving up, instead of failing on the first hiccup.
+    // before giving up on this model.
     const isRetryable = geminiRes.status === 503 || geminiRes.status === 429;
-    if (isRetryable && attempt < 3) {
-      const delayMs = attempt * 1500;
-      console.log(`Gemini ${geminiRes.status}, retrying in ${delayMs}ms (attempt ${attempt})`);
+    if (isRetryable && attempt < 2) {
+      const delayMs = attempt * 1200;
+      console.log(`${model} ${geminiRes.status}, retrying in ${delayMs}ms (attempt ${attempt})`);
       await new Promise(r => setTimeout(r, delayMs));
-      return callGemini(text, attempt + 1);
+      return callGeminiWithModel(text, model, attempt + 1);
     }
 
-    console.error("Gemini API error:", errText);
-    throw new Error(
-      isRetryable
-        ? "Gemini is temporarily busy. Please try again in a moment."
-        : "Gemini API request failed."
-    );
+    console.error(`Gemini API error (${model}):`, errText);
+    const error = new Error(isRetryable ? "busy" : "failed");
+    error.retryable = isRetryable;
+    throw error;
   }
 
   const data = await geminiRes.json();
   return data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "(no text returned)";
+}
+
+// Tries each model in GEMINI_MODELS in order. If one is busy/overloaded even
+// after its own retries, moves on to the next model instead of giving up.
+async function callGemini(text) {
+  let lastError;
+  for (const model of GEMINI_MODELS) {
+    try {
+      return await callGeminiWithModel(text, model);
+    } catch (err) {
+      lastError = err;
+      if (!err.retryable) throw new Error("Gemini API request failed.");
+      console.log(`${model} still busy after retries, trying next model...`);
+    }
+  }
+  throw new Error("Gemini is temporarily busy across all models. Please try again in a moment.");
 }
 
 app.post("/api/generate", async (req, res) => {
