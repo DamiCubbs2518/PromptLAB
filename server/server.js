@@ -9,9 +9,8 @@ const cors = require("cors");
 const app = express();
 const PORT = process.env.PORT || 3001;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-// Tried in order — if the first is busy/overloaded after its retries, fall
-// back to the next one rather than failing outright.
-const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"];
+// Tried in order — if one is busy, rate-limited, or retired, move to the next.
+const GEMINI_MODELS = ["gemini-flash-latest", "gemini-3.6-flash", "gemini-3.5-flash"];
 
 if (!GEMINI_API_KEY) {
   console.error("Missing GEMINI_API_KEY. Add it to server/.env before starting.");
@@ -50,11 +49,13 @@ async function callGeminiWithModel(text, model, attempt = 1) {
   if (!geminiRes.ok) {
     const errText = await geminiRes.text();
 
-    // Gemini is temporarily overloaded (503) or being rate-limited (429) —
-    // both are transient, so retry a couple of times with a short backoff
-    // before giving up on this model.
-    const isRetryable = geminiRes.status === 503 || geminiRes.status === 429;
-    if (isRetryable && attempt < 2) {
+    // 503/429 = temporarily busy/rate-limited — worth a quick retry on this
+    // same model. 404 = this model is retired — no point retrying it, skip
+    // straight to the next model in the list.
+    const isBusy = geminiRes.status === 503 || geminiRes.status === 429;
+    const isRetired = geminiRes.status === 404;
+
+    if (isBusy && attempt < 2) {
       const delayMs = attempt * 1200;
       console.log(`${model} ${geminiRes.status}, retrying in ${delayMs}ms (attempt ${attempt})`);
       await new Promise(r => setTimeout(r, delayMs));
@@ -62,8 +63,8 @@ async function callGeminiWithModel(text, model, attempt = 1) {
     }
 
     console.error(`Gemini API error (${model}):`, errText);
-    const error = new Error(isRetryable ? "busy" : "failed");
-    error.retryable = isRetryable;
+    const error = new Error(isBusy ? "busy" : "failed");
+    error.skipToNext = isBusy || isRetired;
     throw error;
   }
 
@@ -74,14 +75,12 @@ async function callGeminiWithModel(text, model, attempt = 1) {
 // Tries each model in GEMINI_MODELS in order. If one is busy/overloaded even
 // after its own retries, moves on to the next model instead of giving up.
 async function callGemini(text) {
-  let lastError;
   for (const model of GEMINI_MODELS) {
     try {
       return await callGeminiWithModel(text, model);
     } catch (err) {
-      lastError = err;
-      if (!err.retryable) throw new Error("Gemini API request failed.");
-      console.log(`${model} still busy after retries, trying next model...`);
+      if (!err.skipToNext) throw new Error("Gemini API request failed.");
+      console.log(`${model} unavailable, trying next model...`);
     }
   }
   throw new Error("Gemini is temporarily busy across all models. Please try again in a moment.");
